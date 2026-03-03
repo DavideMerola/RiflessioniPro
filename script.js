@@ -1,70 +1,196 @@
-// --- Inizializzazione PWA ---
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
-
-// --- Stato ---
+// --- Stato Applicazione ---
 let notes = JSON.parse(localStorage.getItem("reflection_notes")) || [];
 let categories = JSON.parse(localStorage.getItem("reflection_cats")) || [
   "Generale",
+  "Lavoro",
+  "Personale",
 ];
 let currentEditId = null;
 let isFavorite = false;
 let currentPin = "";
-const CORRECT_PIN = "1234"; // Imposta qui il tuo PIN di default
+const CORRECT_PIN = "1234"; // Cambialo con il tuo PIN preferito
 
-// --- Security (FaceID & PIN) ---
-async function unlockApp() {
-  // Prova Biometria (WebAuthn)
-  if (window.PublicKeyCredential) {
-    // Qui andrebbe la logica FaceID reale, ma per una SPA semplice
-    // usiamo il PIN come fallback universale immediato.
+// --- Inizializzazione al caricamento della pagina ---
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("App inizializzata...");
+  renderNotes();
+  renderCategories();
+  initKeypad();
+  lucide.createIcons();
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("sw.js")
+      .catch((err) => console.log("PWA: SW non registrato", err));
   }
+});
+
+// --- SISTEMA DI BLOCCO (PIN) ---
+function initKeypad() {
+  const keypad = document.querySelector("#lockScreen .grid");
+  if (!keypad) {
+    console.error("Errore: Elemento tastierino non trovato nel DOM!");
+    return;
+  }
+
+  keypad.innerHTML = ""; // Pulisce il tastierino
+
+  // Array dei tasti (iOS style)
+  const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "X"];
+
+  keys.forEach((val) => {
+    const btn = document.createElement("button");
+    btn.textContent = val;
+    // Stile circolare iOS
+    btn.className =
+      "w-16 h-16 rounded-full bg-gray-100 active:bg-blue-200 flex items-center justify-center text-2xl font-medium transition-colors";
+
+    if (val === "X") {
+      btn.onclick = resetPin;
+      btn.classList.add("text-red-500");
+    } else if (val === "") {
+      btn.classList.add("opacity-0", "pointer-events-none");
+    } else {
+      btn.onclick = () => handlePinInput(val.toString());
+    }
+    keypad.appendChild(btn);
+  });
 }
 
 function handlePinInput(num) {
   if (currentPin.length < 4) {
     currentPin += num;
-    document
-      .getElementById(`pin-${currentPin.length}`)
-      .classList.add("bg-blue-500");
+    // Illumina i pallini
+    const dot = document.getElementById(`pin-${currentPin.length}`);
+    if (dot) dot.classList.add("bg-blue-500", "border-blue-500");
+
     if (currentPin === CORRECT_PIN) {
-      document
-        .getElementById("lockScreen")
-        .classList.add("opacity-0", "pointer-events-none");
+      // Sblocco con animazione
+      const lockScreen = document.getElementById("lockScreen");
+      lockScreen.classList.add("opacity-0", "pointer-events-none");
+      setTimeout(() => (lockScreen.style.display = "none"), 500);
     } else if (currentPin.length === 4) {
-      resetPin();
+      // Vibrazione o feedback errore (opzionale)
+      setTimeout(resetPin, 300);
     }
   }
 }
 
 function resetPin() {
   currentPin = "";
-  [1, 2, 3, 4].forEach((i) =>
-    document.getElementById(`pin-${i}`).classList.remove("bg-blue-500"),
-  );
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById(`pin-${i}`);
+    if (dot) dot.classList.remove("bg-blue-500", "border-blue-500");
+  }
 }
 
 function lockApp() {
-  resetPin();
-  document
-    .getElementById("lockScreen")
-    .classList.remove("opacity-0", "pointer-events-none");
+  const lockScreen = document.getElementById("lockScreen");
+  lockScreen.style.display = "flex";
+  setTimeout(() => {
+    lockScreen.classList.remove("opacity-0", "pointer-events-none");
+    resetPin();
+  }, 10);
 }
 
-// --- Ricerca ---
-function handleSearch() {
-  const term = document.getElementById("searchInput").value.toLowerCase();
-  const filtered = notes.filter(
-    (n) =>
-      n.title.toLowerCase().includes(term) ||
-      n.event.toLowerCase().includes(term) ||
-      n.desire.toLowerCase().includes(term),
-  );
-  renderNotes(filtered);
+// --- GESTIONE SIDEBAR E CATEGORIE ---
+function toggleSidebar() {
+  const side = document.getElementById("sidebar");
+  const over = document.getElementById("sidebarOverlay");
+
+  // Controllo di sicurezza: se gli elementi non esistono, esci senza errori
+  if (!side || !over) {
+    console.warn("Elementi sidebar non trovati nell'HTML!");
+    return;
+  }
+
+  const isActive = side.classList.toggle("active");
+  over.classList.toggle("hidden", !isActive);
+
+  // Delay minimo per permettere al browser di registrare il cambio di classe 'hidden'
+  // prima di avviare l'animazione di opacità
+  setTimeout(() => {
+    over.classList.toggle("opacity-100", isActive);
+  }, 10);
 }
 
-// --- Versioning & Save ---
+function renderCategories() {
+  const list = document.getElementById("categoryList");
+  const select = document.getElementById("noteCategory");
+  if (!list || !select) return;
+
+  list.innerHTML = categories
+    .map(
+      (cat) => `
+        <div class="flex items-center gap-3 py-3 px-4 bg-gray-50 rounded-xl text-gray-700 font-medium">
+            <i data-lucide="tag" class="w-4 h-4"></i>
+            <span>${cat}</span>
+        </div>
+    `,
+    )
+    .join("");
+
+  select.innerHTML = categories
+    .map((cat) => `<option value="${cat}">${cat}</option>`)
+    .join("");
+  lucide.createIcons();
+}
+
+function addCategory() {
+  const input = document.getElementById("newCatInput");
+  const val = input.value.trim();
+  if (val && !categories.includes(val)) {
+    categories.push(val);
+    localStorage.setItem("reflection_cats", JSON.stringify(categories));
+    input.value = "";
+    renderCategories();
+  }
+}
+
+// --- GESTIONE NOTE ---
+function renderNotes(data = notes) {
+  const container = document.getElementById("notesContainer");
+  if (!container) return;
+
+  if (data.length === 0) {
+    container.innerHTML = `<div class="text-center py-20 text-gray-400">Nessuna riflessione salvata.</div>`;
+    return;
+  }
+
+  container.innerHTML = data
+    .map(
+      (note) => `
+        <div onclick="editNote('${note.id}')" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center active:scale-[0.98] transition-all">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">${note.category}</span>
+                <span class="font-semibold text-gray-900">${note.title || "Senza titolo"}</span>
+            </div>
+            ${note.favorite ? '<i data-lucide="star" class="w-5 h-5 fill-yellow-400 text-yellow-400"></i>' : '<i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>'}
+        </div>
+    `,
+    )
+    .join("");
+  lucide.createIcons();
+}
+
+function openModal(isEdit = false) {
+  if (!isEdit) {
+    currentEditId = null;
+    isFavorite = false;
+    document.getElementById("noteTitle").value = "";
+    document.getElementById("eventInput").value = "";
+    document.getElementById("desireInput").value = "";
+    document.getElementById("deleteBtn").classList.add("hidden");
+    document.getElementById("versionHistory").classList.add("hidden");
+    updateFavoriteUI();
+  }
+  document.getElementById("noteModal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("noteModal").classList.remove("active");
+}
+
 function saveNote() {
   const title = document.getElementById("noteTitle").value;
   const event = document.getElementById("eventInput").value;
@@ -74,13 +200,12 @@ function saveNote() {
   const existingNote = notes.find((n) => n.id === currentEditId);
   let history = existingNote ? existingNote.history || [] : [];
 
-  // Se il testo è cambiato, salva la vecchia versione
   if (
     existingNote &&
     (existingNote.event !== event || existingNote.desire !== desire)
   ) {
     history.unshift({
-      date: new Date().toLocaleString(),
+      date: new Date().toLocaleString("it-IT"),
       event: existingNote.event,
       desire: existingNote.desire,
     });
@@ -93,7 +218,7 @@ function saveNote() {
     desire,
     category,
     favorite: isFavorite,
-    history: history.slice(0, 5), // Teniamo le ultime 5 versioni
+    history: history.slice(0, 5),
     date: new Date().toISOString(),
   };
 
@@ -110,13 +235,16 @@ function saveNote() {
 
 function editNote(id) {
   const note = notes.find((n) => n.id === id);
+  if (!note) return;
   currentEditId = id;
+  isFavorite = note.favorite;
 
   document.getElementById("noteTitle").value = note.title;
   document.getElementById("eventInput").value = note.event;
   document.getElementById("desireInput").value = note.desire;
+  document.getElementById("noteCategory").value = note.category;
+  document.getElementById("deleteBtn").classList.remove("hidden");
 
-  // Mostra cronologia se presente
   const historySection = document.getElementById("versionHistory");
   const historyList = document.getElementById("historyList");
   if (note.history && note.history.length > 0) {
@@ -124,8 +252,9 @@ function editNote(id) {
     historyList.innerHTML = note.history
       .map(
         (h) => `
-            <div class="border-l-2 border-blue-200 pl-2 mb-2 text-gray-500 italic">
-                ${h.date}: "${h.event.substring(0, 30)}..."
+            <div class="border-l-2 border-blue-200 pl-2 mb-2 text-xs text-gray-500">
+                <p class="font-bold">${h.date}</p>
+                <p class="italic">"${h.event.substring(0, 40)}..."</p>
             </div>
         `,
       )
@@ -134,42 +263,39 @@ function editNote(id) {
     historySection.classList.add("hidden");
   }
 
+  updateFavoriteUI();
   openModal(true);
 }
 
-// Generazione tastierino PIN
-const keypad = document.querySelector("#lockScreen .grid");
-[1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "X"].forEach((val) => {
-  const btn = document.createElement("button");
-  btn.textContent = val;
-  btn.className =
-    "w-16 h-16 rounded-full bg-gray-50 active:bg-blue-100 flex items-center justify-center";
-  if (val === "X") btn.onclick = resetPin;
-  else if (val !== "") btn.onclick = () => handlePinInput(val);
-  keypad.appendChild(btn);
-});
-
-// (Le altre funzioni renderNotes, renderCategories etc. rimangono simili ma usano l'array passato per la ricerca)
-function renderNotes(data = notes) {
-  const container = document.getElementById("notesContainer");
-  container.innerHTML = data
-    .map(
-      (note) => `
-        <div onclick="editNote('${note.id}')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center active:bg-gray-50">
-            <div>
-                <p class="text-[10px] font-bold text-blue-500 uppercase">${note.category}</p>
-                <h3 class="font-semibold text-gray-800">${note.title}</h3>
-            </div>
-            ${note.favorite ? '<i data-lucide="star" class="w-5 h-5 fill-yellow-400 text-yellow-400"></i>' : '<i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>'}
-        </div>
-    `,
-    )
-    .join("");
-  lucide.createIcons();
+function deleteNote() {
+  if (confirm("Eliminare definitivamente questa riflessione?")) {
+    notes = notes.filter((n) => n.id !== currentEditId);
+    localStorage.setItem("reflection_notes", JSON.stringify(notes));
+    closeModal();
+    renderNotes();
+  }
 }
 
-// Inizializza tutto
-document.addEventListener("DOMContentLoaded", () => {
-  renderNotes();
-  lucide.createIcons();
-});
+function handleSearch() {
+  const term = document.getElementById("searchInput").value.toLowerCase();
+  const filtered = notes.filter(
+    (n) =>
+      n.title.toLowerCase().includes(term) ||
+      n.event.toLowerCase().includes(term),
+  );
+  renderNotes(filtered);
+}
+
+function toggleFavoriteModal() {
+  isFavorite = !isFavorite;
+  updateFavoriteUI();
+}
+
+function updateFavoriteUI() {
+  const icon = document.getElementById("modalFavIcon");
+  if (isFavorite) {
+    icon.classList.add("fill-yellow-400", "text-yellow-400");
+  } else {
+    icon.classList.remove("fill-yellow-400", "text-yellow-400");
+  }
+}
