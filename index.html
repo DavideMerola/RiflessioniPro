@@ -77,6 +77,45 @@
       class="flex-1 overflow-y-auto p-4 space-y-3 safe-pb"
     ></main>
 
+    <div
+      id="sidebarOverlay"
+      onclick="toggleSidebar()"
+      class="fixed inset-0 bg-black/30 z-40 hidden opacity-0 transition-opacity"
+    ></div>
+    <aside
+      id="sidebar"
+      class="sidebar fixed left-0 top-0 h-full w-4/5 max-w-xs bg-white z-50 p-6 safe-pt shadow-2xl"
+    >
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Categorie</h2>
+        <button onclick="toggleSidebar()">
+          <i data-lucide="x" class="w-6 h-6 text-gray-400"></i>
+        </button>
+      </div>
+
+      <div id="categoryList" class="space-y-3 mb-6"></div>
+
+      <div class="mt-auto border-t pt-4">
+        <label class="text-xs font-bold text-gray-400 uppercase mb-2 block"
+          >Aggiungi Categoria</label
+        >
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="newCatInput"
+            placeholder="Esempio: Sport"
+            class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none border border-transparent focus:border-blue-500"
+          />
+          <button
+            onclick="addCategory()"
+            class="bg-blue-500 text-white p-2 rounded-lg active:scale-95 transition-transform"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
     <button
       onclick="openModal()"
       class="fixed bottom-10 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white z-20 mb-[env(safe-area-inset-bottom)]"
