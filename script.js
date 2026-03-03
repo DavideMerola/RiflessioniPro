@@ -8,7 +8,7 @@ let categories = JSON.parse(localStorage.getItem("reflection_cats")) || [
 let currentEditId = null;
 let isFavorite = false;
 let currentPin = "";
-const CORRECT_PIN = "1234"; // Cambialo con il tuo PIN preferito
+const CORRECT_PIN = "9088"; // Cambialo con il tuo PIN preferito
 
 // --- Inizializzazione al caricamento della pagina ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -299,3 +299,4 @@ function updateFavoriteUI() {
     icon.classList.remove("fill-yellow-400", "text-yellow-400");
   }
 }
+
