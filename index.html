@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <title>Reflection Notes Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="h-screen flex flex-col overflow-hidden">
+    <div
+      id="lockScreen"
+      class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-8 transition-opacity duration-500"
+    >
+      <i data-lucide="lock" class="w-12 h-12 text-blue-500 mb-6"></i>
+      <h2 class="text-xl font-bold mb-4">Inserisci PIN</h2>
+      <div class="flex gap-4 mb-8">
+        <div
+          id="pin-1"
+          class="w-4 h-4 rounded-full border-2 border-blue-200"
+        ></div>
+        <div
+          id="pin-2"
+          class="w-4 h-4 rounded-full border-2 border-blue-200"
+        ></div>
+        <div
+          id="pin-3"
+          class="w-4 h-4 rounded-full border-2 border-blue-200"
+        ></div>
+        <div
+          id="pin-4"
+          class="w-4 h-4 rounded-full border-2 border-blue-200"
+        ></div>
+      </div>
+      <div class="grid grid-cols-3 gap-6 text-2xl font-semibold"></div>
+    </div>
+
+    <header class="glass sticky top-0 z-30 safe-pt border-b">
+      <div class="px-5 py-2 flex flex-col gap-2">
+        <div class="flex justify-between items-center h-10">
+          <button onclick="toggleSidebar()">
+            <i data-lucide="menu" class="w-6 h-6 text-blue-500"></i>
+          </button>
+          <h1 class="font-bold text-lg">Riflessioni</h1>
+          <button onclick="lockApp()">
+            <i data-lucide="shield-check" class="w-6 h-6 text-green-500"></i>
+          </button>
+        </div>
+        <div class="relative pb-2">
+          <i
+            data-lucide="search"
+            class="absolute left-3 top-2 w-4 h-4 text-gray-400"
+          ></i>
+          <input
+            type="text"
+            id="searchInput"
+            oninput="handleSearch()"
+            placeholder="Cerca tra i tuoi pensieri..."
+            class="w-full bg-gray-100 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none"
+          />
+        </div>
+      </div>
+    </header>
+
+    <main
+      id="notesContainer"
+      class="flex-1 overflow-y-auto p-4 space-y-3 safe-pb"
+    ></main>
+
+    <button
+      onclick="openModal()"
+      class="fixed bottom-10 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white z-20 mb-[env(safe-area-inset-bottom)]"
+    >
+      <i data-lucide="plus" class="w-8 h-8"></i>
+    </button>
+
+    <div
+      id="noteModal"
+      class="fixed inset-0 bg-white z-[60] flex flex-col safe-pt"
+    >
+      <div class="px-4 h-14 flex justify-between items-center border-b">
+        <button onclick="closeModal()" class="text-blue-500">Chiudi</button>
+        <input
+          type="text"
+          id="noteTitle"
+          placeholder="Titolo"
+          class="text-center font-bold flex-1 mx-4 outline-none"
+        />
+        <button onclick="toggleFavoriteModal()">
+          <i
+            id="modalFavIcon"
+            data-lucide="star"
+            class="w-6 h-6 text-gray-300"
+          ></i>
+        </button>
+      </div>
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <textarea
+          id="eventInput"
+          class="flex-1 bg-red-50/50 p-6 outline-none resize-none"
+          placeholder="Cosa è successo?"
+        ></textarea>
+        <textarea
+          id="desireInput"
+          class="flex-1 bg-green-50/50 p-6 outline-none resize-none border-t"
+          placeholder="Come avrei voluto che andasse?"
+        ></textarea>
+
+        <div
+          id="versionHistory"
+          class="h-32 bg-gray-50 border-t overflow-y-auto p-4 hidden"
+        >
+          <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">
+            Cronologia Modifiche
+          </h4>
+          <div id="historyList" class="space-y-2 text-sm"></div>
+        </div>
+      </div>
+      <footer class="p-4 border-t flex flex-col gap-3 safe-pb glass">
+        <select
+          id="noteCategory"
+          class="bg-gray-100 rounded-xl px-4 py-3 w-full appearance-none"
+        ></select>
+        <div class="flex gap-2">
+          <button
+            id="deleteBtn"
+            onclick="deleteNote()"
+            class="hidden flex-1 py-4 bg-red-100 text-red-600 rounded-2xl font-bold"
+          >
+            Elimina
+          </button>
+          <button
+            onclick="saveNote()"
+            class="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold"
+          >
+            Salva
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

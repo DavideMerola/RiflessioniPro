@@ -1,0 +1,16 @@
+{
+  "name": "Reflection Notes",
+  "short_name": "Reflections",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/564/564445.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
